@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
 import { ChevronDown } from "lucide-react";
 import PhechaanLogo from "@/components/PhechaanLogo";
-import Lottie from "lottie-react";
-import lottieData from "../assets/intro-lottie.json"; // Add your Lottie JSON here
 
 // Add a simple mobile detection hook
 function useIsMobile() {
@@ -71,8 +68,8 @@ function useAnimatedIntro({ refs, isMobile, reducedMotion, onComplete, onSkip })
       // Animate logo reveal (draw effect)
       // (Assume PhechaanLogo supports a 'draw' prop for animation, or add a mask/clipPath)
       // Analytics placeholder
-      window.__intro_analytics = (window.__intro_analytics || []);
-      window.__intro_analytics.push({ event: "intro_shown", ts: Date.now() });
+      (window as any).__intro_analytics = ((window as any).__intro_analytics || []);
+      (window as any).__intro_analytics.push({ event: "intro_shown", ts: Date.now() });
       return () => tl.kill();
     });
   }, [isMobile, reducedMotion, refs]);
@@ -91,7 +88,7 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
   const ctaRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textGroupRef = useRef<HTMLDivElement>(null);
-  const skipButtonRef = useRef<HTMLDivElement>(null);
+  const skipButtonRef = useRef<HTMLButtonElement>(null);
   const [showContent, setShowContent] = useState(false);
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -100,6 +97,12 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
   const [lang, setLang] = useState("en");
   const isMobile = useIsMobile();
   const reducedMotion = usePrefersReducedMotion();
+
+  const onSkip = useCallback(() => {
+    localStorage.setItem("phechaan_intro_skipped", "1");
+    setShowContent(true);
+    onComplete();
+  }, [onComplete]);
 
   // Focus management
   useEffect(() => {
@@ -183,11 +186,15 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
       onComplete();
     }
   }, [onComplete]);
-  const onSkip = useCallback(() => {
-    localStorage.setItem("phechaan_intro_skipped", "1");
-    setShowContent(true);
-    onComplete();
-  }, [onComplete]);
+
+  // Play sound effect at the start of the intro
+  useEffect(() => {
+    if (!muted && !reducedMotion && !localStorage.getItem("phechaan_intro_skipped")) {
+      const audio = new Audio("/chime.mp3");
+      audio.volume = 0.5;
+      audio.play();
+    }
+  }, [muted, reducedMotion]);
 
   // Sound effect (placeholder)
   const playSound = useCallback(() => {
@@ -206,6 +213,15 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
     onSkip,
   });
 
+  // Show a loading spinner if the intro is not ready
+  if (!showContent && progress === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-phechaan-deep-earth via-phechaan-earth to-phechaan-bronze">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-phechaan-gold"></div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={introRef}
@@ -213,10 +229,6 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
       aria-modal="true"
       role="dialog"
     >
-      {/* Lottie Animation */}
-      <div className="absolute inset-0 pointer-events-none">
-        <Lottie animationData={lottieData} loop autoplay style={{ width: "100%", height: "100%" }} />
-      </div>
       {/* Parallax/animated background handled by useEffect */}
       <div className="flex flex-col items-center justify-center h-full text-center px-2 sm:px-4">
         {/* Theme toggle */}
