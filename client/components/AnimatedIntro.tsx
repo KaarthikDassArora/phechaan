@@ -231,14 +231,6 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
     >
       {/* Parallax/animated background handled by useEffect */}
       <div className="flex flex-col items-center justify-center h-full text-center px-2 sm:px-4">
-        {/* Theme toggle */}
-        <button onClick={toggleTheme} className="absolute left-3 top-3 sm:left-6 sm:top-6 text-xs text-phechaan-cream/60 hover:text-phechaan-gold transition-colors" aria-label="Toggle theme">
-          {theme === "dark" ? "Light Mode" : "Dark Mode"}
-        </button>
-        {/* Language toggle */}
-        <button onClick={() => setLang(lang === "en" ? "hi" : "en")} className="absolute left-3 bottom-3 sm:left-6 sm:bottom-6 text-xs text-phechaan-cream/60 hover:text-phechaan-gold transition-colors" aria-label="Toggle language">
-          {lang === "en" ? "हिंदी" : "EN"}
-        </button>
         {/* Text Group: Logo, Heading, Taglines */}
         <div ref={textGroupRef} className="mb-6 sm:mb-8">
           <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
