@@ -1,5 +1,7 @@
 # Phechaan
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-phechaan.netlify.app-brightgreen?style=for-the-badge&logo=netlify)](https://phechaan.netlify.app)
+
 🌏 **Phechaan** — Explore India the Real Way
 
 A modern, production-ready full-stack web app for authentic, sustainable eco-tourism in India. Built with React, Express, Vite, and Netlify Functions.
