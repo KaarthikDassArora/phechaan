@@ -3,6 +3,18 @@ import { gsap } from "gsap";
 import { ChevronDown } from "lucide-react";
 import PhechaanLogo from "@/components/PhechaanLogo";
 
+// Add a simple mobile detection hook
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 interface AnimatedIntroProps {
   onComplete: () => void;
 }
@@ -16,6 +28,7 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
   const ctaRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showContent, setShowContent] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const tl = gsap.timeline({
@@ -50,20 +63,20 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
 
     // Create floating particles
     const createParticles = () => {
-      for (let i = 0; i < 30; i++) {
+      const particleCount = isMobile ? 10 : 30;
+      for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement("div");
         particle.className =
           "absolute w-1 h-1 bg-phechaan-gold rounded-full opacity-60";
         particle.style.left = Math.random() * 100 + "%";
         particle.style.top = Math.random() * 100 + "%";
         introRef.current?.appendChild(particle);
-
         gsap.to(particle, {
-          y: -window.innerHeight,
-          x: (Math.random() - 0.5) * 200,
+          y: isMobile ? -window.innerHeight * 0.7 : -window.innerHeight,
+          x: (Math.random() - 0.5) * (isMobile ? 80 : 200),
           opacity: 0,
           scale: 0,
-          duration: Math.random() * 5 + 3,
+          duration: Math.random() * (isMobile ? 3 : 5) + (isMobile ? 2 : 3),
           repeat: -1,
           delay: Math.random() * 3,
           ease: "power2.out",
@@ -186,7 +199,7 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
     return () => {
       tl.kill();
     };
-  }, []);
+  }, [isMobile]);
 
   const handleSkip = () => {
     onComplete();
@@ -204,78 +217,72 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
       {/* Background Mountains */}
       <div
         ref={mountainsRef}
-        className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-phechaan-earth to-transparent"
+        className="absolute bottom-0 left-0 right-0 h-32 sm:h-64 bg-gradient-to-t from-phechaan-earth to-transparent"
         style={{
           clipPath:
             "polygon(0 100%, 20% 60%, 40% 80%, 60% 40%, 80% 70%, 100% 50%, 100% 100%)",
         }}
       />
-
       {/* Sun */}
       <div
         ref={sunRef}
-        className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-phechaan-gold to-phechaan-dark-gold rounded-full shadow-lg"
+        className="absolute top-6 right-6 sm:top-20 sm:right-20 w-16 h-16 sm:w-32 sm:h-32 bg-gradient-to-br from-phechaan-gold to-phechaan-dark-gold rounded-full shadow-lg"
         style={{
-          boxShadow: "0 0 100px rgba(255, 204, 0, 0.3)",
+          boxShadow: "0 0 60px rgba(255, 204, 0, 0.3)",
         }}
       />
-
       {/* Content */}
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
+      <div className="flex flex-col items-center justify-center h-full text-center px-2 sm:px-4">
         {/* Logo */}
-        <div ref={logoRef} className="mb-8">
-          <div className="w-24 h-24 mx-auto mb-6">
-            <PhechaanLogo size={96} className="w-full h-full" />
+        <div ref={logoRef} className="mb-6 sm:mb-8">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
+            <PhechaanLogo size={isMobile ? 64 : 96} className="w-full h-full" />
           </div>
-          <h1 className="text-6xl md:text-8xl font-bold text-phechaan-gold mb-4">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold text-phechaan-gold mb-2 sm:mb-4">
             Phechaan
           </h1>
         </div>
-
         {/* Tagline */}
-        <div ref={taglineRef} className="mb-12">
-          <p className="text-2xl md:text-3xl text-phechaan-cream font-light">
+        <div ref={taglineRef} className="mb-8 sm:mb-12">
+          <p className="text-lg sm:text-2xl md:text-3xl text-phechaan-cream font-light">
             Rediscover Your Roots...
           </p>
-          <p className="text-lg md:text-xl text-phechaan-cream/80 mt-2">
+          <p className="text-base sm:text-lg md:text-xl text-phechaan-cream/80 mt-1 sm:mt-2">
             Explore India the Real Way
           </p>
         </div>
-
         {/* CTA Button */}
-        <div ref={ctaRef} className="mb-16">
+        <div ref={ctaRef} className="mb-10 sm:mb-16">
           <button
             onClick={handleScroll}
-            className="bg-phechaan-gold hover:bg-phechaan-dark-gold text-phechaan-deep-earth px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="bg-phechaan-gold hover:bg-phechaan-dark-gold text-phechaan-deep-earth px-6 py-3 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             Start Your Journey
           </button>
         </div>
-
         {/* Scroll Indicator */}
         <div
           ref={scrollRef}
           onClick={handleScroll}
           className="cursor-pointer flex flex-col items-center text-phechaan-cream/60 hover:text-phechaan-cream transition-colors duration-300 group"
         >
-          <span className="text-sm mb-2 group-hover:scale-110 transition-transform duration-300">
+          <span className="text-xs sm:text-sm mb-1 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
             Scroll to explore
           </span>
           <div className="relative">
             <ChevronDown
-              size={32}
+              size={isMobile ? 24 : 32}
               className="group-hover:scale-125 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-phechaan-gold/20 rounded-full scale-0 group-hover:scale-150 transition-transform duration-300" />
           </div>
         </div>
       </div>
-
       {/* Skip Button */}
       {showContent && (
         <button
           onClick={handleSkip}
-          className="absolute top-6 right-6 text-phechaan-cream/60 hover:text-phechaan-cream transition-colors"
+          className="absolute top-3 right-3 sm:top-6 sm:right-6 text-phechaan-cream/60 hover:text-phechaan-cream transition-colors text-sm sm:text-base"
         >
           Skip
         </button>
