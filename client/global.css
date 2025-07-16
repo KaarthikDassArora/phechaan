@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 25 15% 8%;
+    --foreground: 45 100% 85%;
+
+    --card: 25 20% 12%;
+    --card-foreground: 45 100% 85%;
+
+    --popover: 25 20% 12%;
+    --popover-foreground: 45 100% 85%;
+
+    --primary: 45 100% 65%;
+    --primary-foreground: 25 15% 8%;
+
+    --secondary: 35 40% 25%;
+    --secondary-foreground: 45 100% 85%;
+
+    --muted: 25 15% 15%;
+    --muted-foreground: 45 50% 65%;
+
+    --accent: 45 100% 65%;
+    --accent-foreground: 25 15% 8%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 35 20% 20%;
+    --input: 35 20% 20%;
+    --ring: 45 100% 65%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 25 20% 10%;
+    --sidebar-foreground: 45 80% 80%;
+    --sidebar-primary: 45 100% 65%;
+    --sidebar-primary-foreground: 25 15% 8%;
+    --sidebar-accent: 35 30% 18%;
+    --sidebar-accent-foreground: 45 80% 80%;
+    --sidebar-border: 35 20% 20%;
+    --sidebar-ring: 45 100% 65%;
+
+    /* Custom Phechaan colors */
+    --phechaan-gold: 45 100% 65%;
+    --phechaan-dark-gold: 42 85% 55%;
+    --phechaan-bronze: 35 60% 45%;
+    --phechaan-earth: 25 30% 25%;
+    --phechaan-deep-earth: 25 15% 8%;
+    --phechaan-cream: 45 50% 92%;
+  }
+
+  .light {
+    --background: 45 50% 98%;
+    --foreground: 25 15% 8%;
+
+    --card: 45 30% 95%;
+    --card-foreground: 25 15% 8%;
+
+    --popover: 45 30% 95%;
+    --popover-foreground: 25 15% 8%;
+
+    --primary: 45 100% 65%;
+    --primary-foreground: 25 15% 8%;
+
+    --secondary: 45 20% 88%;
+    --secondary-foreground: 25 15% 8%;
+
+    --muted: 45 20% 90%;
+    --muted-foreground: 25 40% 40%;
+
+    --accent: 45 100% 65%;
+    --accent-foreground: 25 15% 8%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 45 15% 85%;
+    --input: 45 15% 85%;
+    --ring: 45 100% 65%;
+
+    --sidebar-background: 45 30% 95%;
+    --sidebar-foreground: 25 15% 8%;
+    --sidebar-primary: 45 100% 65%;
+    --sidebar-primary-foreground: 25 15% 8%;
+    --sidebar-accent: 45 20% 88%;
+    --sidebar-accent-foreground: 25 15% 8%;
+    --sidebar-border: 45 15% 85%;
+    --sidebar-ring: 45 100% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
