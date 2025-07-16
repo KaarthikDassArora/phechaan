@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
+import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { ChevronDown } from "lucide-react";
 import PhechaanLogo from "@/components/PhechaanLogo";
+import Lottie from "lottie-react";
+import lottieData from "../assets/intro-lottie.json"; // Add your Lottie JSON here
 
 // Add a simple mobile detection hook
 function useIsMobile() {
@@ -13,6 +15,67 @@ function useIsMobile() {
     return () => window.removeEventListener("resize", check);
   }, []);
   return isMobile;
+}
+
+// Custom hook for reduced motion
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const handler = () => setReduced(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
+// Custom hook for animation logic
+function useAnimatedIntro({ refs, isMobile, reducedMotion, onComplete, onSkip }) {
+  useEffect(() => {
+    if (reducedMotion) {
+      // Instantly show content if reduced motion
+      refs.setShowContent(true);
+      return;
+    }
+    // Lazy load GSAP
+    import("gsap").then(({ gsap }) => {
+      const tl = gsap.timeline({
+        onComplete: () => refs.setShowContent(true),
+      });
+      gsap.set([
+        refs.textGroupRef.current,
+        refs.ctaRef.current,
+        refs.scrollRef.current,
+      ], {
+        opacity: 0,
+        y: 100,
+        scale: 0.5,
+        rotation: 180,
+        filter: "blur(20px)",
+      });
+      gsap.set(refs.sunRef.current, { scale: 0, opacity: 0, rotation: -180 });
+      gsap.set(refs.mountainsRef.current, { y: 200, opacity: 0, skewX: 25 });
+      // Animate sequence
+      tl.to(refs.mountainsRef.current, { duration: 2.5, y: 0, opacity: 1, skewX: 0, ease: "elastic.out(1, 0.3)" })
+        .to(refs.sunRef.current, { duration: 2.5, scale: 1, opacity: 1, rotation: 0, ease: "elastic.out(1, 0.5)" }, "-=1.5")
+        .to(refs.textGroupRef.current, { duration: 2, opacity: 1, y: 0, scale: 1, rotation: 0, filter: "blur(0px)", ease: "elastic.out(1, 0.3)" })
+        .to(refs.ctaRef.current, { duration: 1.2, opacity: 1, y: 0, scale: 1, rotation: 0, filter: "blur(0px)", ease: "elastic.out(1, 0.3)" }, "-=0.8")
+        .to(refs.scrollRef.current, { duration: 1, opacity: 1, y: 0, scale: 1, rotation: 0, filter: "blur(0px)", ease: "back.out(1.7)" }, "-=0.5");
+      // Continuous animations
+      gsap.to(refs.sunRef.current, { rotation: 360, duration: 25, repeat: -1, ease: "none" });
+      gsap.to(refs.sunRef.current, { scale: 1.1, duration: 4, repeat: -1, yoyo: true, ease: "power2.inOut" });
+      gsap.to(refs.scrollRef.current, { y: 15, duration: 2, repeat: -1, yoyo: true, ease: "power2.inOut" });
+      gsap.to(refs.scrollRef.current, { boxShadow: "0 0 20px rgba(251, 191, 36, 0.3)", duration: 1.5, repeat: -1, yoyo: true, ease: "power2.inOut" });
+      gsap.to(refs.textGroupRef.current, { y: -10, duration: 3, repeat: -1, yoyo: true, ease: "power2.inOut", delay: 2 });
+      // Animate logo reveal (draw effect)
+      // (Assume PhechaanLogo supports a 'draw' prop for animation, or add a mask/clipPath)
+      // Analytics placeholder
+      window.__intro_analytics = (window.__intro_analytics || []);
+      window.__intro_analytics.push({ event: "intro_shown", ts: Date.now() });
+      return () => tl.kill();
+    });
+  }, [isMobile, reducedMotion, refs]);
 }
 
 interface AnimatedIntroProps {
@@ -27,247 +90,180 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
   const taglineRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textGroupRef = useRef<HTMLDivElement>(null);
+  const skipButtonRef = useRef<HTMLDivElement>(null);
   const [showContent, setShowContent] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [theme, setTheme] = useState("dark");
+  const [announcement, setAnnouncement] = useState("");
+  const [lang, setLang] = useState("en");
   const isMobile = useIsMobile();
+  const reducedMotion = usePrefersReducedMotion();
 
+  // Focus management
   useEffect(() => {
-    const tl = gsap.timeline({
-      onComplete: () => {
-        setShowContent(true);
-      },
-    });
+    if (showContent && skipButtonRef.current) {
+      skipButtonRef.current.focus();
+    }
+  }, [showContent]);
 
-    // Initial state with dramatic effects
-    gsap.set(
-      [logoRef.current, taglineRef.current, ctaRef.current, scrollRef.current],
-      {
-        opacity: 0,
-        y: 100,
-        scale: 0.5,
-        rotation: 180,
-        filter: "blur(20px)",
-      },
-    );
+  // Theme toggle
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
-    gsap.set(sunRef.current, {
-      scale: 0,
-      opacity: 0,
-      rotation: -180,
-    });
+  // Localization
+  const translations = {
+    en: {
+      start: "Start Your Journey",
+      skip: "Skip",
+      scroll: "Scroll to explore",
+      mute: "Mute Sound",
+      unmute: "Unmute Sound",
+      announcement: "Intro complete. Main content loaded.",
+    },
+    hi: {
+      start: "अपनी यात्रा शुरू करें",
+      skip: "छोड़ें",
+      scroll: "एक्सप्लोर करने के लिए स्क्रॉल करें",
+      mute: "ध्वनि बंद करें",
+      unmute: "ध्वनि चालू करें",
+      announcement: "परिचय पूरा। मुख्य सामग्री लोड हो गई।",
+    },
+  };
+  const t = translations[lang];
 
-    gsap.set(mountainsRef.current, {
-      y: 200,
-      opacity: 0,
-      skewX: 25,
-    });
+  // Announce intro completion
+  useEffect(() => {
+    if (showContent) setAnnouncement(t.announcement);
+  }, [showContent, t]);
 
-    // Create floating particles
-    const createParticles = () => {
-      const particleCount = isMobile ? 10 : 30;
-      for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement("div");
-        particle.className =
-          "absolute w-1 h-1 bg-phechaan-gold rounded-full opacity-60";
-        particle.style.left = Math.random() * 100 + "%";
-        particle.style.top = Math.random() * 100 + "%";
-        introRef.current?.appendChild(particle);
-        gsap.to(particle, {
-          y: isMobile ? -window.innerHeight * 0.7 : -window.innerHeight,
-          x: (Math.random() - 0.5) * (isMobile ? 80 : 200),
-          opacity: 0,
-          scale: 0,
-          duration: Math.random() * (isMobile ? 3 : 5) + (isMobile ? 2 : 3),
-          repeat: -1,
-          delay: Math.random() * 3,
-          ease: "power2.out",
-        });
-      }
+  // Parallax background effect
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!introRef.current) return;
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) / window.innerWidth;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) / window.innerHeight;
+      introRef.current.style.backgroundPosition = `${50 + x * 10}% ${50 + y * 10}%`;
     };
-    createParticles();
-
-    // Enhanced animation sequence
-    tl.to(mountainsRef.current, {
-      duration: 2.5,
-      y: 0,
-      opacity: 1,
-      skewX: 0,
-      ease: "elastic.out(1, 0.3)",
-    })
-      .to(
-        sunRef.current,
-        {
-          duration: 2.5,
-          scale: 1,
-          opacity: 1,
-          rotation: 0,
-          ease: "elastic.out(1, 0.5)",
-        },
-        "-=1.5",
-      )
-      .to(logoRef.current, {
-        duration: 2,
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        rotation: 0,
-        filter: "blur(0px)",
-        ease: "elastic.out(1, 0.3)",
-      })
-      .to(
-        taglineRef.current,
-        {
-          duration: 1.5,
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          filter: "blur(0px)",
-          ease: "back.out(1.7)",
-        },
-        "-=1",
-      )
-      .to(
-        ctaRef.current,
-        {
-          duration: 1.2,
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          filter: "blur(0px)",
-          ease: "elastic.out(1, 0.3)",
-        },
-        "-=0.8",
-      )
-      .to(
-        scrollRef.current,
-        {
-          duration: 1,
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          filter: "blur(0px)",
-          ease: "back.out(1.7)",
-        },
-        "-=0.5",
-      );
-
-    // Enhanced continuous animations
-    gsap.to(sunRef.current, {
-      rotation: 360,
-      duration: 25,
-      repeat: -1,
-      ease: "none",
-    });
-
-    gsap.to(sunRef.current, {
-      scale: 1.1,
-      duration: 4,
-      repeat: -1,
-      yoyo: true,
-      ease: "power2.inOut",
-    });
-
-    gsap.to(scrollRef.current, {
-      y: 15,
-      duration: 2,
-      repeat: -1,
-      yoyo: true,
-      ease: "power2.inOut",
-    });
-
-    // Add pulsing glow effect to scroll indicator
-    gsap.to(scrollRef.current, {
-      boxShadow: "0 0 20px rgba(251, 191, 36, 0.3)",
-      duration: 1.5,
-      repeat: -1,
-      yoyo: true,
-      ease: "power2.inOut",
-    });
-
-    // Add floating animation to logo
-    gsap.to(logoRef.current, {
-      y: -10,
-      duration: 3,
-      repeat: -1,
-      yoyo: true,
-      ease: "power2.inOut",
-      delay: 2,
-    });
-
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("touchmove", handleMove);
     return () => {
-      tl.kill();
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("touchmove", handleMove);
     };
-  }, [isMobile]);
+  }, []);
 
-  const handleSkip = () => {
-    onComplete();
-  };
+  // Keyboard skip
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape" || e.key === "Enter") onSkip();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onSkip]);
 
-  const handleScroll = () => {
+  // Progress indicator
+  useEffect(() => {
+    if (showContent) return;
+    let frame;
+    let start = Date.now();
+    const duration = 5000; // 5s
+    function animate() {
+      setProgress(Math.min(1, (Date.now() - start) / duration));
+      if (Date.now() - start < duration) frame = requestAnimationFrame(animate);
+    }
+    animate();
+    return () => cancelAnimationFrame(frame);
+  }, [showContent]);
+
+  // LocalStorage skip
+  useEffect(() => {
+    if (localStorage.getItem("phechaan_intro_skipped")) {
+      setShowContent(true);
+      onComplete();
+    }
+  }, [onComplete]);
+  const onSkip = useCallback(() => {
+    localStorage.setItem("phechaan_intro_skipped", "1");
+    setShowContent(true);
     onComplete();
-  };
+  }, [onComplete]);
+
+  // Sound effect (placeholder)
+  const playSound = useCallback(() => {
+    if (!muted) {
+      // Play a gentle chime (add your own sound file)
+      // new Audio('/chime.mp3').play();
+    }
+  }, [muted]);
+
+  // Animation logic
+  useAnimatedIntro({
+    refs: { introRef, mountainsRef, sunRef, textGroupRef, ctaRef, scrollRef, setShowContent },
+    isMobile,
+    reducedMotion,
+    onComplete,
+    onSkip,
+  });
 
   return (
     <div
       ref={introRef}
-      className="fixed inset-0 z-50 bg-gradient-to-b from-phechaan-deep-earth via-phechaan-earth to-phechaan-bronze overflow-hidden"
+      className={`fixed inset-0 z-50 bg-gradient-to-b from-phechaan-deep-earth via-phechaan-earth to-phechaan-bronze overflow-hidden ${theme === "light" ? "theme-light" : "theme-dark"}`}
+      aria-modal="true"
+      role="dialog"
     >
-      {/* Background Mountains */}
-      <div
-        ref={mountainsRef}
-        className="absolute bottom-0 left-0 right-0 h-32 sm:h-64 bg-gradient-to-t from-phechaan-earth to-transparent"
-        style={{
-          clipPath:
-            "polygon(0 100%, 20% 60%, 40% 80%, 60% 40%, 80% 70%, 100% 50%, 100% 100%)",
-        }}
-      />
-      {/* Sun */}
-      <div
-        ref={sunRef}
-        className="absolute top-6 right-6 sm:top-20 sm:right-20 w-16 h-16 sm:w-32 sm:h-32 bg-gradient-to-br from-phechaan-gold to-phechaan-dark-gold rounded-full shadow-lg"
-        style={{
-          boxShadow: "0 0 60px rgba(255, 204, 0, 0.3)",
-        }}
-      />
-      {/* Content */}
+      {/* Lottie Animation */}
+      <div className="absolute inset-0 pointer-events-none">
+        <Lottie animationData={lottieData} loop autoplay style={{ width: "100%", height: "100%" }} />
+      </div>
+      {/* Parallax/animated background handled by useEffect */}
       <div className="flex flex-col items-center justify-center h-full text-center px-2 sm:px-4">
-        {/* Logo */}
-        <div ref={logoRef} className="mb-6 sm:mb-8">
+        {/* Theme toggle */}
+        <button onClick={toggleTheme} className="absolute left-3 top-3 sm:left-6 sm:top-6 text-xs text-phechaan-cream/60 hover:text-phechaan-gold transition-colors" aria-label="Toggle theme">
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </button>
+        {/* Language toggle */}
+        <button onClick={() => setLang(lang === "en" ? "hi" : "en")} className="absolute left-3 bottom-3 sm:left-6 sm:bottom-6 text-xs text-phechaan-cream/60 hover:text-phechaan-gold transition-colors" aria-label="Toggle language">
+          {lang === "en" ? "हिंदी" : "EN"}
+        </button>
+        {/* Text Group: Logo, Heading, Taglines */}
+        <div ref={textGroupRef} className="mb-6 sm:mb-8">
           <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6">
-            <PhechaanLogo size={isMobile ? 64 : 96} className="w-full h-full" />
+            <PhechaanLogo size={isMobile ? 64 : 96} className="w-full h-full" /*draw={true}*/ />
           </div>
           <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold text-phechaan-gold mb-2 sm:mb-4">
             Phechaan
           </h1>
-        </div>
-        {/* Tagline */}
-        <div ref={taglineRef} className="mb-8 sm:mb-12">
-          <p className="text-lg sm:text-2xl md:text-3xl text-phechaan-cream font-light">
-            Rediscover Your Roots...
-          </p>
-          <p className="text-base sm:text-lg md:text-xl text-phechaan-cream/80 mt-1 sm:mt-2">
-            Explore India the Real Way
-          </p>
+          <div className="mb-8 sm:mb-12">
+            <p className="text-lg sm:text-2xl md:text-3xl text-phechaan-cream font-light">
+              Rediscover Your Roots...
+            </p>
+            <p className="text-base sm:text-lg md:text-xl text-phechaan-cream/80 mt-1 sm:mt-2">
+              Explore India the Real Way
+            </p>
+          </div>
         </div>
         {/* CTA Button */}
         <div ref={ctaRef} className="mb-10 sm:mb-16">
           <button
-            onClick={handleScroll}
+            onClick={onComplete}
             className="bg-phechaan-gold hover:bg-phechaan-dark-gold text-phechaan-deep-earth px-6 py-3 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+            aria-label={t.start}
           >
-            Start Your Journey
+            {t.start}
           </button>
         </div>
         {/* Scroll Indicator */}
         <div
           ref={scrollRef}
-          onClick={handleScroll}
+          onClick={onComplete}
           className="cursor-pointer flex flex-col items-center text-phechaan-cream/60 hover:text-phechaan-cream transition-colors duration-300 group"
+          tabIndex={0}
+          aria-label={t.scroll}
         >
           <span className="text-xs sm:text-sm mb-1 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
-            Scroll to explore
+            {t.scroll}
           </span>
           <div className="relative">
             <ChevronDown
@@ -277,16 +273,33 @@ export default function AnimatedIntro({ onComplete }: AnimatedIntroProps) {
             <div className="absolute inset-0 bg-phechaan-gold/20 rounded-full scale-0 group-hover:scale-150 transition-transform duration-300" />
           </div>
         </div>
+        {/* Progress Bar */}
+        <div className="w-40 h-2 bg-phechaan-gold/20 rounded-full mt-6 mx-auto overflow-hidden">
+          <div className="h-full bg-phechaan-gold rounded-full" style={{ width: `${progress * 100}%` }} />
+        </div>
+        {/* Mute Button */}
+        <button
+          onClick={() => setMuted((m) => !m)}
+          className="mt-4 text-xs text-phechaan-cream/60 hover:text-phechaan-gold transition-colors"
+          aria-label={muted ? t.unmute : t.mute}
+        >
+          {muted ? t.unmute : t.mute}
+        </button>
       </div>
       {/* Skip Button */}
       {showContent && (
         <button
-          onClick={handleSkip}
+          ref={skipButtonRef}
+          onClick={onComplete}
           className="absolute top-3 right-3 sm:top-6 sm:right-6 text-phechaan-cream/60 hover:text-phechaan-cream transition-colors text-sm sm:text-base"
+          aria-label={t.skip}
         >
-          Skip
+          {t.skip}
         </button>
       )}
+      {/* Screen reader announcement */}
+      <div aria-live="polite" className="sr-only">{announcement}</div>
+      {/* PWA manifest & service worker placeholder (add in public/manifest.json and register sw.js) */}
     </div>
   );
 }
